@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 from typing import List, Dict, Any, Optional, Union
 from datetime import datetime
 from enum import Enum
@@ -11,7 +11,7 @@ class APIResponse(BaseModel):
     """Base model for API responses"""
     success: bool = True
     message: Optional[str] = None
-    data: Optional[Dict[str, Any]] = None
+    data: Optional[Union[Dict[str, Any], List[Any]]] = None
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     meta: Optional[Dict[str, Any]] = None
 
@@ -92,8 +92,9 @@ class ExperienceData(BaseModel):
     featured: bool
 
 
-class ExperienceList(BaseModel):
-    __root__: List[ExperienceData]
+class ExperienceList(RootModel[List[ExperienceData]]):
+    """List of experience data items"""
+    pass
 
 # ---------- Projects ----------
 class ModelMetrics(BaseModel):
@@ -152,8 +153,9 @@ class ProjectData(BaseModel):
     deployment: Optional[Deployment] = None
 
 
-class ProjectList(BaseModel):
-    __root__: List[ProjectData]
+class ProjectList(RootModel[List[ProjectData]]):
+    """List of project data items"""
+    pass
 
 # ---------- Certifications ----------
 class CertificationData(BaseModel):
@@ -236,6 +238,7 @@ class PaginatedCertificatesResponse(BaseModel):
 
 # ---------- Provider ----------
 class LLMProvider(str, Enum):
+    GROQ = "groq"
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
     GOOGLE = "google"

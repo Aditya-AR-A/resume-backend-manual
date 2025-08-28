@@ -3,6 +3,8 @@ from pathlib import Path
 from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.utils.logger import logger
+
 from app.models.schemas import AppConfig, Settings, DatabaseConfig, CacheConfig, AIConfig, LLMConfig, LLMProvider
 
 
@@ -22,6 +24,34 @@ class AppSettings(BaseSettings):
     # Security
     secret_key: str  # required, loaded from .env/.env.local
 
+    
+    # AI Provider API Keys
+    groq_api_key: str = ""
+    openai_api_key: str = ""
+    anthropic_api_key: str = ""
+
+    # AI Configuration
+    primary_llm_provider: LLMProvider = LLMProvider.GROQ
+    ai_cache_enabled: bool = True
+    ai_cache_ttl: int = 3600
+    ai_max_retries: int = 3
+    ai_timeout: int = 30
+
+    # Groq Configuration
+    groq_model: str = "llama3-8b-8192"
+    groq_temperature: float = 0.7
+    groq_max_tokens: int = 1000
+
+    # OpenAI Configuration
+    openai_model: str = "gpt-3.5-turbo"
+    openai_temperature: float = 0.7
+    openai_max_tokens: int = 1000
+
+    # Anthropic Configuration
+    anthropic_model: str = "claude-3-sonnet-20240229"
+    anthropic_temperature: float = 0.7
+    anthropic_max_tokens: int = 1000
+
     # Database Config
     db_url: Optional[str] = None
     db_pool_size: int = 10
@@ -32,6 +62,7 @@ class AppSettings(BaseSettings):
     cache_backend: str = "redis"   # redis | memcached | memory | file | none
     cache_url: Optional[str] = None
     cache_ttl: int = 300           # default 5 minutes
+    cache_max_size: int = 1000     # maximum cache size
 
     # Data Directory
     base_dir: Path = Path(__file__).resolve().parent.parent.parent
@@ -56,9 +87,9 @@ class AppSettings(BaseSettings):
 
 
     def print_settings_summary(self):
-        print("Application Settings Summary:")
+        logger.info("Application Settings Summary:")
         for key, value in self.model_dump().items():
-            print(f"{key}: {value}")
+            logger.info(f"{key}: {value}")
 
 
     def get_app_config(self) -> AppConfig:
@@ -75,7 +106,7 @@ class AppSettings(BaseSettings):
     def get_database_config(self) -> DatabaseConfig:
         """Get database configuration"""
         return DatabaseConfig(
-            url=self.database_url
+            url=self.db_url
         )
 
 
@@ -171,26 +202,26 @@ def validate_settings() -> bool:
         errors.append(f"Data directory does not exist: {app_settings.data_dir}")
 
     if errors:
-        print("Configuration errors:")
+        logger.info("Configuration errors:")
         for error in errors:
-            print(f"  - {error}")
+            logger.info(f"  - {error}")
         return False
 
     return True
 
 
 def print_settings_summary():
-    """Print a summary of current settings"""
-    print("=== Application Settings Summary ===")
-    print(f"App Name: {app_settings.app_name}")
-    print(f"Version: {app_settings.app_version}")
-    print(f"Debug Mode: {app_settings.debug}")
-    print(f"Host: {app_settings.host}:{app_settings.port}")
-    print(f"Data Directory: {app_settings.data_dir}")
+    """logger.info a summary of current settings"""
+    logger.info("=== Application Settings Summary ===")
+    logger.info(f"App Name: {app_settings.app_name}")
+    logger.info(f"Version: {app_settings.app_version}")
+    logger.info(f"Debug Mode: {app_settings.debug}")
+    logger.info(f"Host: {app_settings.host}:{app_settings.port}")
+    logger.info(f"Data Directory: {app_settings.data_dir}")
 
-    print("\n=== AI Configuration ===")
-    print(f"Primary Provider: {app_settings.primary_llm_provider.value}")
-    print(f"Cache Enabled: {app_settings.ai_cache_enabled}")
+    logger.info("\n=== AI Configuration ===")
+    logger.info(f"Primary Provider: {app_settings.primary_llm_provider.value}")
+    logger.info(f"Cache Enabled: {app_settings.ai_cache_enabled}")
 
     providers = []
     if app_settings.groq_api_key:
@@ -200,12 +231,12 @@ def print_settings_summary():
     if app_settings.anthropic_api_key:
         providers.append("Anthropic")
 
-    print(f"Available Providers: {', '.join(providers) if providers else 'None'}")
-    print("=" * 40)
+    logger.info(f"Available Providers: {', '.join(providers) if providers else 'None'}")
+    logger.info("=" * 40)
 
 
 # Validate settings on import
 if not validate_settings():
-    print("Warning: Some settings are not properly configured!")
+    logger.info("Warning: Some settings are not properly configured!")
     print_settings_summary()
 

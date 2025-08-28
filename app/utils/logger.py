@@ -25,8 +25,6 @@ from datetime import datetime
 class CLogger(logging.Formatter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._fmt = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        self._datefmt = "%Y-%m-%d %H:%M:%S"
         self.colors = {
             "red": "\033[31m",
             "green": "\033[32m",
@@ -39,35 +37,26 @@ class CLogger(logging.Formatter):
             "orange": "\033[38;5;208m",
             "reset": "\033[0m",
         }
-        self._style = logging.LogRecord
 
     def format(self, record: logging.LogRecord) -> str:
-        log_fmt = self._fmt
+        # Create the basic log message
+        log_fmt = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
-        # If the user provides a custom color via `extra`
-        color = getattr(record, "color", None)
-        if color and color in self.colors:
-            log_fmt = f"{self.colors[color]}{log_fmt}{self.colors['reset']}"
-        else:
-            # Fallback: color based on log level
-            if record.levelname == "DEBUG":
-                log_fmt = self.colors["cyan"] + log_fmt + self.colors["reset"]
-            elif record.levelname == "INFO":
-                log_fmt = self.colors["green"] + log_fmt + self.colors["reset"]
-            elif record.levelname == "WARNING":
-                log_fmt = self.colors["yellow"] + log_fmt + self.colors["reset"]
-            elif record.levelname == "ERROR":
-                log_fmt = self.colors["red"] + log_fmt + self.colors["reset"]
-            elif record.levelname == "CRITICAL":
-                log_fmt = self.colors["magenta"] + log_fmt + self.colors["reset"]
+        # Add color based on log level
+        if record.levelname == "DEBUG":
+            log_fmt = self.colors["cyan"] + log_fmt + self.colors["reset"]
+        elif record.levelname == "INFO":
+            log_fmt = self.colors["green"] + log_fmt + self.colors["reset"]
+        elif record.levelname == "WARNING":
+            log_fmt = self.colors["yellow"] + log_fmt + self.colors["reset"]
+        elif record.levelname == "ERROR":
+            log_fmt = self.colors["red"] + log_fmt + self.colors["reset"]
+        elif record.levelname == "CRITICAL":
+            log_fmt = self.colors["magenta"] + log_fmt + self.colors["reset"]
 
-        # Temporarily swap fmt so logging.Formatter can process it
-        original_fmt = self._fmt
-        self._fmt = log_fmt
-        formatted = super().format(record)
-        self._fmt = original_fmt
-
-        return formatted
+        # Format the message using the standard formatter
+        formatter = logging.Formatter(log_fmt, "%Y-%m-%d %H:%M:%S")
+        return formatter.format(record)
 
 
 
@@ -119,3 +108,6 @@ def get_logger(name: str = None,
     logger.addHandler(session_handler)
 
     return logger
+
+
+logger = get_logger()
