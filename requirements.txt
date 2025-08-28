@@ -10,3 +10,4 @@ httpx==0.25.2
 openai
 groq
 anthropic
+psutil==5.9.6

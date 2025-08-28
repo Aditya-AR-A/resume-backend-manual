@@ -1,35 +1,20 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import List, Optional
-import json
-import os
 from app.models.schemas import (
     PortfolioProfile, ExperienceList, ProjectList,
     CertificationData, APIResponse, FilterOptions,
     PaginatedProjectsResponse, PaginatedJobsResponse,
     PaginatedCertificatesResponse
 )
-from app.config.settings import app_settings
+from app.services import data_service
 from app.utils.logger import logger
 
 router = APIRouter()
 
-def load_json_data(filename: str):
-    """Load data from JSON file"""
-    file_path = app_settings.data_dir / filename
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        logger.error(f"Data file not found: {file_path}")
-        return None
-    except json.JSONDecodeError as e:
-        logger.error(f"Error parsing JSON file {file_path}: {str(e)}")
-        return None
-
 @router.get("/profile", response_model=APIResponse)
 async def get_profile():
     """Get portfolio profile information"""
-    data = load_json_data("page.json")
+    data = data_service.get_profile_data()
     if data is None:
         raise HTTPException(status_code=404, detail="Profile data not found")
 
@@ -42,7 +27,7 @@ async def get_profile():
 @router.get("/intro", response_model=APIResponse)
 async def get_intro():
     """Get introduction information"""
-    data = load_json_data("intro.json")
+    data = data_service.get_intro_data()
     if data is None:
         raise HTTPException(status_code=404, detail="Intro data not found")
 
@@ -55,7 +40,7 @@ async def get_intro():
 @router.get("/layout", response_model=APIResponse)
 async def get_layout():
     """Get layout configuration"""
-    data = load_json_data("layout.json")
+    data = data_service.get_layout_data()
     if data is None:
         raise HTTPException(status_code=404, detail="Layout data not found")
 
@@ -72,21 +57,14 @@ async def get_projects(
     limit: int = Query(50, description="Limit number of results")
 ):
     """Get projects data with optional filtering"""
-    data = load_json_data("projects.json")
-    if data is None:
+    projects = data_service.get_projects_data(
+        category=category,
+        featured=featured,
+        limit=limit
+    )
+
+    if projects is None:
         raise HTTPException(status_code=404, detail="Projects data not found")
-
-    projects = data if isinstance(data, list) else []
-
-    # Apply filters
-    if category:
-        projects = [p for p in projects if p.get("category", "").lower() == category.lower()]
-
-    if featured is not None:
-        projects = [p for p in projects if p.get("featured", False) == featured]
-
-    # Apply limit
-    projects = projects[:limit]
 
     return APIResponse(
         success=True,
@@ -97,7 +75,7 @@ async def get_projects(
 @router.get("/experience", response_model=APIResponse)
 async def get_experience():
     """Get work experience data"""
-    data = load_json_data("jobs.json")
+    data = data_service.get_experience_data()
     if data is None:
         raise HTTPException(status_code=404, detail="Experience data not found")
 
@@ -110,7 +88,7 @@ async def get_experience():
 @router.get("/certificates", response_model=APIResponse)
 async def get_certificates():
     """Get certificates data"""
-    data = load_json_data("certificates.json")
+    data = data_service.get_certificates_data()
     if data is None:
         raise HTTPException(status_code=404, detail="Certificates data not found")
 
@@ -123,12 +101,7 @@ async def get_certificates():
 @router.get("/projects/{project_id}", response_model=APIResponse)
 async def get_project_by_id(project_id: str):
     """Get specific project by ID"""
-    data = load_json_data("projects.json")
-    if data is None:
-        raise HTTPException(status_code=404, detail="Projects data not found")
-
-    projects = data if isinstance(data, list) else []
-    project = next((p for p in projects if p.get("id") == project_id), None)
+    project = data_service.get_project_by_id(project_id)
 
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")

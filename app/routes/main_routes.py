@@ -1,47 +1,40 @@
 from fastapi import APIRouter, HTTPException
 from app.models.schemas import HealthResponse, APIResponse
-from app.config.settings import app_settings
+from app.services import health_service
 from app.utils.logger import logger
-import time
 
 router = APIRouter()
 
 @router.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint"""
-    start_time = time.time()
-    uptime = time.time() - start_time  # This would be more sophisticated in production
+    health_data = health_service.get_health_status()
 
     return HealthResponse(
-        status="healthy",
-        version=app_settings.app_version,
-        uptime=uptime
+        status=health_data.get("status", "unknown"),
+        version=health_data.get("version", "unknown"),
+        uptime=health_data.get("uptime"),
+        timestamp=health_data.get("timestamp")
     )
 
 @router.get("/status")
 async def get_status():
     """Get application status"""
+    status_data = health_service.get_system_status()
+
     return APIResponse(
         success=True,
         message="Application is running",
-        data={
-            "version": app_settings.app_version,
-            "debug": app_settings.debug,
-            "host": app_settings.host,
-            "port": app_settings.port
-        }
+        data=status_data
     )
 
 @router.get("/config")
 async def get_config():
     """Get application configuration (without sensitive data)"""
+    config_data = health_service.get_config_status()
+
     return APIResponse(
         success=True,
         message="Configuration retrieved",
-        data={
-            "app_name": app_settings.app_name,
-            "version": app_settings.app_version,
-            "debug": app_settings.debug,
-            "cors_origins": app_settings.cors_origins
-        }
+        data=config_data
     )
